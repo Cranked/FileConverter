@@ -16,14 +16,17 @@ public class App extends Application {
     @Override
     public void start(Stage primaryStage) throws IOException {
         primaryStage.setTitle("Dosya Dönüştürücü");
-        Scene scene = new Scene(loadFXML("sample"), 1000, 650);
+        FXMLLoader loader = loadFXML("sample");
+        Scene scene = new Scene(loader.load(), 1000, 650);
         primaryStage.setScene(scene);
         primaryStage.show();
+        Controller controller = loader.getController();
+        controller.init();
     }
 
-    private static Parent loadFXML(String fxml) throws IOException {
+    private static FXMLLoader loadFXML(String fxml) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(App.class.getResource(fxml + ".fxml"));
-        return fxmlLoader.load();
+        return fxmlLoader;
     }
 
     public static void main(String[] args) {

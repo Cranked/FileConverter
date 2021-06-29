@@ -4,7 +4,9 @@ import com.raisedsoftware.animation.Animation;
 import com.raisedsoftware.model.ImageViewModel;
 import com.raisedsoftware.model.Shadow;
 import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
 import javafx.scene.Node;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -24,10 +26,15 @@ public class Controller {
     ImageViewModel imageViewModel = new ImageViewModel();
     Animation animation = new Animation();
     Shadow shadow = new Shadow();
-    public VBox preViewVbox;
     @FXML
+    public VBox preViewVbox;
 
+    @FXML
+    ComboBox selectedTypeComboBox;
+
+    @FXML
     ImageView sourceImageView;
+
 
     @FXML
     ScrollPane rightScrollPane;
@@ -38,8 +45,9 @@ public class Controller {
     @FXML
     private void handleDragOver(DragEvent dragEvent) {
         System.out.println("Dosya geldi");
-        if (dragEvent.getDragboard().hasFiles())
+        if (dragEvent.getDragboard().hasFiles()) {
             dragEvent.acceptTransferModes(TransferMode.ANY);
+        }
     }
 
     @FXML
@@ -54,7 +62,7 @@ public class Controller {
                 case "jpg":
                 case "png":
                     Image image = new Image(new FileInputStream(files.get(0)));
-                    Rectangle rectangle = shadow.createShadowedBox(sourceImageView.getFitWidth(), sourceImageView.getFitHeight(), sourceImageView.getFitWidth(), sourceImageView.getFitWidth(), 3, 50,30);
+                    Rectangle rectangle = shadow.createShadowedBox(sourceImageView.getFitWidth(), sourceImageView.getFitHeight(), sourceImageView.getFitWidth(), sourceImageView.getFitWidth(), 3, 50, 30);
                     sourceImageView.setClip(rectangle);
                     sourceImageView.setImage(image);
                     break;
@@ -66,7 +74,6 @@ public class Controller {
                     break;
 
                 case "xlsx":
-
                     break;
             }
         } catch (Exception e) {
@@ -125,7 +132,7 @@ public class Controller {
     }
 
     @FXML
-    private void hoverAnimationPulse(MouseEvent event) {
+    public void hoverAnimationPulse(MouseEvent event) {
         Node node = (Node) event.getSource();
         animation.hoverAnimationPulse(node);
     }
@@ -139,9 +146,18 @@ public class Controller {
     @FXML
     private void exitMouse(MouseEvent event) {
         Node node = (Node) event.getSource();
+        System.exit(0);
     }
 
     private void setFilePreview(ImageView imageView, Image image) {
         imageView.setImage(image);
+    }
+
+    public void init() {
+        if (selectedTypeComboBox.getItems().size() <= 0) {
+            selectedTypeComboBox.getItems().addAll("Pdf Belgesi (.pdf)", "Word Belgesi (.docx)", "Excel Dosyası (.xlsx)", "Metin Belgesi (.txt)", "Resim (.png)");
+            selectedTypeComboBox.getSelectionModel().select(0);
+        }
+
     }
 }
