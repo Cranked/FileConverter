@@ -1,16 +1,10 @@
 package com.raisedsoftware;
 
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Cursor;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.input.DragEvent;
-import javafx.scene.input.MouseEvent;
-import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 
 import java.io.IOException;
 
@@ -18,20 +12,21 @@ import java.io.IOException;
  * JavaFX App
  */
 public class App extends Application {
-    private double xOffset, yOffset;
-
 
     @Override
     public void start(Stage primaryStage) throws IOException {
         primaryStage.setTitle("Dosya Dönüştürücü");
-        Scene scene = new Scene(loadFXML("sample"), 750  , 750);
+        FXMLLoader loader = loadFXML("sample");
+        Scene scene = new Scene(loader.load(), 1000, 650);
         primaryStage.setScene(scene);
         primaryStage.show();
+        Controller controller = loader.getController();
+        controller.init();
     }
 
-    private static Parent loadFXML(String fxml) throws IOException {
+    private static FXMLLoader loadFXML(String fxml) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(App.class.getResource(fxml + ".fxml"));
-        return fxmlLoader.load();
+        return fxmlLoader;
     }
 
     public static void main(String[] args) {
