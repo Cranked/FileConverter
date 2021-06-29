@@ -1,13 +1,19 @@
 package com.raisedsoftware;
 
+import com.raisedsoftware.animation.Animation;
 import com.raisedsoftware.model.ImageViewModel;
+import com.raisedsoftware.model.Shadow;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.DragEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Rectangle;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,10 +22,15 @@ import java.util.List;
 
 public class Controller {
     ImageViewModel imageViewModel = new ImageViewModel();
+    Animation animation = new Animation();
+    Shadow shadow = new Shadow();
     public VBox preViewVbox;
     @FXML
 
     ImageView sourceImageView;
+
+    @FXML
+    ScrollPane rightScrollPane;
 
     @FXML
     VBox rightMenuSubVbox;
@@ -36,16 +47,17 @@ public class Controller {
         try {
             List<File> files = dragEvent.getDragboard().getFiles();
             String extension = getFileExtension(files.get(0)).toLowerCase();
-            loadFilesToPreview(files, rightMenuSubVbox);
+            VBox previewVBox = loadFilesToPreview(files, rightMenuSubVbox);
+            rightScrollPane.setContent(previewVBox);
             switch (extension) {
                 case "jpeg":
                 case "jpg":
                 case "png":
                     Image image = new Image(new FileInputStream(files.get(0)));
-                    preViewVbox.setVisible(true);
+                    Rectangle rectangle = shadow.createShadowedBox(sourceImageView.getFitWidth(), sourceImageView.getFitHeight(), sourceImageView.getFitWidth(), sourceImageView.getFitWidth(), 3, 50,30);
+                    sourceImageView.setClip(rectangle);
                     sourceImageView.setImage(image);
                     break;
-
                 case "pdf":
 
                     break;
@@ -71,7 +83,7 @@ public class Controller {
         return name.substring(lastIndexOf + 1);
     }
 
-    private void loadFilesToPreview(List<File> files, VBox vBox) {
+    private VBox loadFilesToPreview(List<File> files, VBox vBox) {
         vBox.setSpacing(10);
         for (File file : files) {
             try {
@@ -80,8 +92,7 @@ public class Controller {
                     case "jpg":
                     case "png":
                         HBox hBox = new HBox();
-                        hBox.setMaxWidth(240);
-                        hBox.setMaxHeight(150);
+                        hBox.setPrefSize(240, 200);
                         ImageView imgView = new ImageView();
                         imgView.setOnMouseClicked(mouseEvent -> {
                             try {
@@ -94,7 +105,6 @@ public class Controller {
                         });
                         imgView.prefHeight(150);
                         imgView.prefWidth(240);
-
                         imgView.setFitWidth(230);
                         imgView.setFitHeight(150);
                         imgView.setImage(new Image(new FileInputStream(file.getAbsolutePath())));
@@ -111,6 +121,24 @@ public class Controller {
                 System.out.println(e);
             }
         }
+        return vBox;
+    }
+
+    @FXML
+    private void hoverAnimationPulse(MouseEvent event) {
+        Node node = (Node) event.getSource();
+        animation.hoverAnimationPulse(node);
+    }
+
+    @FXML
+    private void exitAnimationPulse(MouseEvent event) {
+        Node node = (Node) event.getSource();
+        animation.exitAnimationPulse(node);
+    }
+
+    @FXML
+    private void exitMouse(MouseEvent event) {
+        Node node = (Node) event.getSource();
     }
 
     private void setFilePreview(ImageView imageView, Image image) {

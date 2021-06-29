@@ -4,4 +4,5 @@ module com.raisedsoftware {
     requires javafx.fxml;
 
     opens com.raisedsoftware;
+    opens com.raisedsoftware.animation;
 }
