@@ -4,26 +4,31 @@ import com.raisedsoftware.animation.Animation;
 import com.raisedsoftware.model.ImageViewModel;
 import com.raisedsoftware.model.Shadow;
 import javafx.fxml.FXML;
-import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.rendering.PDFRenderer;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.List;
 
 public class Controller {
-    ImageViewModel imageViewModel = new ImageViewModel();
+    ImageViewModel model = new ImageViewModel();
     Animation animation = new Animation();
     Shadow shadow = new Shadow();
     @FXML
@@ -67,7 +72,10 @@ public class Controller {
                     sourceImageView.setImage(image);
                     break;
                 case "pdf":
-
+                    PDDocument pdDocument = PDDocument.load(files.get(0));
+                    PDFRenderer pdfRenderer = new PDFRenderer(pdDocument);
+                    sourceImageView.setImage(convertToFxImage(pdfRenderer.renderImage(0)));
+                    pdDocument.close();
                     break;
                 case "docx":
 
@@ -98,30 +106,16 @@ public class Controller {
                     case "jpeg":
                     case "jpg":
                     case "png":
-                        HBox hBox = new HBox();
-                        hBox.setPrefSize(240, 200);
-                        ImageView imgView = new ImageView();
-                        imgView.setOnMouseClicked(mouseEvent -> {
-                            try {
-                                Image image = new Image(new FileInputStream(file));
-                                setFilePreview(sourceImageView, image);
-                                imageViewModel.setImage(image);
-                            } catch (FileNotFoundException e) {
-                                e.printStackTrace();
-                            }
-                        });
-                        imgView.prefHeight(150);
-                        imgView.prefWidth(240);
-                        imgView.setFitWidth(230);
-                        imgView.setFitHeight(150);
-                        imgView.setImage(new Image(new FileInputStream(file.getAbsolutePath())));
-                        hBox.fillHeightProperty().set(true);
-                        hBox.getChildren().add(imgView);
-                        vBox.getChildren().add(hBox);
+                        vBox.getChildren().add(createHboxFromImage(file));
                         break;
                     case "pdf":
-                        setFilePreview(sourceImageView, new Image(new FileInputStream(file)));
-                        file.canRead();
+                        PDDocument pdDocument = PDDocument.load(file);
+                        PDFRenderer pdfRenderer = new PDFRenderer(pdDocument);
+                        for (int i = 0; i < pdDocument.getNumberOfPages(); i++) {
+                            var bufferedImage = pdfRenderer.renderImage(i);
+                            vBox.getChildren().add(createHboxFromImage(convertToFxImage(bufferedImage)));
+                        }
+                        pdDocument.close();
                         break;
                 }
             } catch (Exception e) {
@@ -149,8 +143,49 @@ public class Controller {
         System.exit(0);
     }
 
-    private void setFilePreview(ImageView imageView, Image image) {
+    public void setFilePreview(ImageView imageView, Image image) {
         imageView.setImage(image);
+    }
+
+    public HBox createHboxFromImage(File file) throws FileNotFoundException {
+        HBox hBox = new HBox();
+        hBox.setPrefSize(240, 200);
+        ImageView imgView = new ImageView();
+        imgView.setOnMouseClicked(mouseEvent -> {
+            try {
+                Image image = new Image(new FileInputStream(file));
+                setFilePreview(sourceImageView, image);
+                model.setImage(image);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        });
+        imgView.prefHeight(150);
+        imgView.prefWidth(240);
+        imgView.setFitWidth(230);
+        imgView.setFitHeight(150);
+        imgView.setImage(new Image(new FileInputStream(file.getAbsolutePath())));
+        hBox.fillHeightProperty().set(true);
+        hBox.getChildren().add(imgView);
+        return hBox;
+    }
+
+    public HBox createHboxFromImage(Image image) throws FileNotFoundException {
+        HBox hBox = new HBox();
+        hBox.setPrefSize(240, 200);
+        ImageView imgView = new ImageView();
+        imgView.setOnMouseClicked(mouseEvent -> {
+            setFilePreview(sourceImageView, image);
+            model.setImage(image);
+        });
+        imgView.prefHeight(150);
+        imgView.prefWidth(240);
+        imgView.setFitWidth(230);
+        imgView.setFitHeight(150);
+        imgView.setImage(image);
+        hBox.fillHeightProperty().set(true);
+        hBox.getChildren().add(imgView);
+        return hBox;
     }
 
     public void init() {
@@ -158,6 +193,19 @@ public class Controller {
             selectedTypeComboBox.getItems().addAll("Pdf Belgesi (.pdf)", "Word Belgesi (.docx)", "Excel Dosyası (.xlsx)", "Metin Belgesi (.txt)", "Resim (.png)");
             selectedTypeComboBox.getSelectionModel().select(0);
         }
+    }
 
+    private static Image convertToFxImage(BufferedImage image) {
+        WritableImage wr = null;
+        if (image != null) {
+            wr = new WritableImage(image.getWidth(), image.getHeight());
+            PixelWriter pw = wr.getPixelWriter();
+            for (int x = 0; x < image.getWidth(); x++) {
+                for (int y = 0; y < image.getHeight(); y++) {
+                    pw.setArgb(x, y, image.getRGB(x, y));
+                }
+            }
+        }
+        return new ImageView(wr).getImage();
     }
 }
