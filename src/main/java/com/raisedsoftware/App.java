@@ -22,6 +22,7 @@ public class App extends Application {
         primaryStage.show();
         Controller controller = loader.getController();
         controller.init();
+
     }
 
     private static FXMLLoader loadFXML(String fxml) throws IOException {
