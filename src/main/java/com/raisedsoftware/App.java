@@ -2,7 +2,6 @@ package com.raisedsoftware;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
@@ -17,7 +16,7 @@ public class App extends Application {
     public void start(Stage primaryStage) throws IOException {
         primaryStage.setTitle("Dosya Dönüştürücü");
         FXMLLoader loader = loadFXML("sample");
-        Scene scene = new Scene(loader.load(), 1000, 650);
+        Scene scene = new Scene(loader.load(), 1300, 750);
         primaryStage.setScene(scene);
         primaryStage.show();
         Controller controller = loader.getController();

@@ -8,6 +8,7 @@ import fr.opensagres.poi.xwpf.converter.pdf.PdfConverter;
 import fr.opensagres.poi.xwpf.converter.pdf.PdfOptions;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
@@ -20,13 +21,23 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
+import net.sourceforge.tess4j.Tesseract;
+import net.sourceforge.tess4j.util.LoadLibs;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.Format;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class Controller {
@@ -39,6 +50,9 @@ public class Controller {
 
     @FXML
     ComboBox selectedTypeComboBox;
+
+    @FXML
+    Button convertButton;
 
     @FXML
     ImageView sourceImageView;
@@ -90,7 +104,7 @@ public class Controller {
                     break;
             }
         } catch (Exception e) {
-            System.out.println(e);
+            System.err.println(e);
         }
     }
 
@@ -110,8 +124,9 @@ public class Controller {
                 String type = getFileExtension(file);
                 switch (type) {
                     case "jpeg":
-                    case "jpg":
                     case "png":
+                    case "jfif":
+                    case "jpg":
                         vBox.getChildren().add(createHboxFromImage(vBox, file));
                         break;
                     case "pdf":
@@ -123,7 +138,7 @@ public class Controller {
                         break;
                 }
             } catch (Exception e) {
-                System.out.println(e);
+                System.err.println(e);
             }
         }
         return vBox;
@@ -152,7 +167,7 @@ public class Controller {
 
     public HBox createHboxFromImage(VBox vBox, File file) throws FileNotFoundException {
         HBox hBox = new HBox();
-        hBox.setPrefSize(240, 200);
+        hBox.setPrefSize(280, 200);
         ImageView imgView = new ImageView();
         ImageView close = new ImageView();
         imgView.setId(KeyCreater.randomNumber());
@@ -161,7 +176,7 @@ public class Controller {
         close.setPickOnBounds(true);
         imgView.setOnMouseClicked(mouseEvent -> {
             try {
-                Image image = new Image(new FileInputStream(file.getAbsolutePath()));
+                Image image = convertImage(file);
                 setFilePreview(sourceImageView, image);
                 model.setImage(image);
                 model.setId(imgView.getId());
@@ -179,11 +194,11 @@ public class Controller {
             vBox.requestLayout();
 
         });
-        imgView.prefHeight(150);
-        imgView.prefWidth(220);
-        imgView.setFitWidth(210);
-        imgView.setFitHeight(150);
-        imgView.setImage(new Image(new FileInputStream(file.getAbsolutePath())));
+        imgView.prefHeight(180);
+        imgView.prefWidth(270);
+        imgView.setFitWidth(270);
+        imgView.setFitHeight(180);
+        imgView.setImage(convertImage(file));
 
         close.setImage(new Image(getClass().getResourceAsStream("/icons/icon-close.png")));
         hBox.fillHeightProperty().set(true);
@@ -203,6 +218,28 @@ public class Controller {
         pdDocument.close();
     }
 
+    public String convertImagetoText(File file,String language) {
+        String result = "";
+        try {
+
+            Tesseract tesseract = new Tesseract();
+//            tesseract.setLanguage(language);
+            Path dataDirectory = Paths.get(ClassLoader.getSystemResource("data").toURI());
+            tesseract.setDatapath(dataDirectory.toString());
+            tesseract.setOcrEngineMode(1);
+            BufferedImage image = ImageIO.read(new FileInputStream(file.getAbsolutePath()));
+            result = tesseract.doOCR(image);
+            System.out.println(result);
+        } catch (Exception e) {
+            System.err.println(e);
+        }
+        return result;
+    }
+
+    public Image convertImage(File file) throws FileNotFoundException {
+        return new Image(new FileInputStream(file.getAbsolutePath()));
+    }
+
     public File convertDocxtoPdf(File file) throws IOException {
         XWPFDocument document = new XWPFDocument(new FileInputStream(file.getAbsolutePath()));
         PdfOptions pdfOptions = PdfOptions.create();
@@ -217,7 +254,7 @@ public class Controller {
 
     public HBox createHboxFromImage(VBox vBox, Image image) {
         HBox hBox = new HBox();
-        hBox.setPrefSize(240, 200);
+        hBox.setPrefSize(280, 200);
         ImageView imgView = new ImageView();
         ImageView close = new ImageView();
         imgView.setId(KeyCreater.randomNumber());
@@ -242,10 +279,10 @@ public class Controller {
 
         });
         close.setImage(new Image(getClass().getResourceAsStream("/icons/icon-close.png")));
-        imgView.prefHeight(150);
-        imgView.prefWidth(240);
-        imgView.setFitWidth(230);
-        imgView.setFitHeight(150);
+        imgView.prefHeight(180);
+        imgView.prefWidth(270);
+        imgView.setFitWidth(270);
+        imgView.setFitHeight(180);
         imgView.setImage(image);
         hBox.fillHeightProperty().set(true);
         hBox.getChildren().add(imgView);
@@ -273,5 +310,30 @@ public class Controller {
             }
         }
         return new ImageView(wr).getImage();
+    }
+
+    public BufferedImage createImage(String fileName, int width, int height, String drawString, String formatName) throws IOException {
+        BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+
+        // Create a graphics which can be used to draw into the buffered image
+        Graphics2D g2d = bufferedImage.createGraphics();
+
+        // fill all the image with white
+        g2d.setColor(Color.white);
+        g2d.fillRect(0, 0, width, height);
+
+        // create a circle with black
+        g2d.setColor(Color.black);
+        g2d.fillOval(0, 0, width, height);
+
+        // create a string with yellow
+        g2d.setColor(Color.yellow);
+        g2d.drawString(drawString, 50, 120);
+
+        // Disposes of this graphics context and releases any system resources that it is using.
+        g2d.dispose();
+        File file = new File(fileName + "." + formatName);
+        ImageIO.write(bufferedImage, formatName, file);
+        return bufferedImage;
     }
 }
