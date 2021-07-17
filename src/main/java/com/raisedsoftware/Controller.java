@@ -18,13 +18,14 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import net.sourceforge.tess4j.Tesseract;
-import net.sourceforge.tess4j.util.LoadLibs;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 
@@ -34,10 +35,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.Format;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
 
 public class Controller {
@@ -57,6 +55,8 @@ public class Controller {
     @FXML
     ImageView sourceImageView;
 
+    @FXML
+    AnchorPane mainAnchorPane;
 
     @FXML
     ScrollPane rightScrollPane;
@@ -82,6 +82,7 @@ public class Controller {
             switch (extension) {
                 case "jpeg":
                 case "jpg":
+                case "jfif":
                 case "png":
                     Image image = new Image(new FileInputStream(files.get(0)));
                     Rectangle rectangle = shadow.createShadowedBox(sourceImageView.getFitWidth(), sourceImageView.getFitHeight(), sourceImageView.getFitWidth(), sourceImageView.getFitWidth(), 3, 50, 30);
@@ -99,8 +100,8 @@ public class Controller {
                 case "docx":
 
                     break;
-
                 case "xlsx":
+
                     break;
             }
         } catch (Exception e) {
@@ -186,7 +187,7 @@ public class Controller {
         });
         close.setOnMouseClicked(event -> {
             if (imgView.getId().equals(model.getId())) {
-                sourceImageView.setImage(null);
+                sourceImageView.setImage(convertToFxImage(createImage("empty", sourceImageView.getFitWidth(), sourceImageView.getFitHeight(), "Dosyayı sürükle veya Seç", "png")));
                 model.setImage(null);
                 model.setId(null);
             }
@@ -218,7 +219,7 @@ public class Controller {
         pdDocument.close();
     }
 
-    public String convertImagetoText(File file,String language) {
+    public String convertImagetoText(File file, String language) {
         String result = "";
         try {
 
@@ -270,7 +271,7 @@ public class Controller {
         });
         close.setOnMouseClicked(event -> {
             if (imgView.getId().equals(model.getId())) {
-                sourceImageView.setImage(null);
+                sourceImageView.setImage(convertToFxImage(createImage("empty", sourceImageView.getFitWidth(), sourceImageView.getFitHeight(), "Dosyayı sürükle veya Seç", "png")));
                 model.setImage(null);
                 model.setId(null);
             }
@@ -292,9 +293,14 @@ public class Controller {
     }
 
     public void init() {
-        if (selectedTypeComboBox.getItems().size() <= 0) {
-            selectedTypeComboBox.getItems().addAll("Pdf Belgesi (.pdf)", "Word Belgesi (.docx)", "Metin Belgesi (.txt)", "Resim (.png)");
-            selectedTypeComboBox.getSelectionModel().select(0);
+        try {
+            if (selectedTypeComboBox.getItems().size() <= 0) {
+                selectedTypeComboBox.getItems().addAll("Pdf Belgesi (.pdf)", "Word Belgesi (.docx)", "Metin Belgesi (.txt)", "Resim (.png)");
+                selectedTypeComboBox.getSelectionModel().select(0);
+            }
+            sourceImageView.setImage(convertToFxImage(createImage("empty", sourceImageView.getFitWidth(), sourceImageView.getFitHeight(), "Dosyayı sürükle veya Seç", "png")));
+        } catch (Exception e) {
+            System.err.println(e);
         }
     }
 
@@ -312,28 +318,45 @@ public class Controller {
         return new ImageView(wr).getImage();
     }
 
-    public BufferedImage createImage(String fileName, int width, int height, String drawString, String formatName) throws IOException {
-        BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+    public BufferedImage createImage(String fileName, double width, double height, String drawString, String formatName) {
+        try {
+            File file = new File(fileName + "." + formatName);
+            BufferedImage bufferedImage = new BufferedImage((int) width, (int) height, BufferedImage.TYPE_INT_RGB);
+            // Create a graphics which can be used to draw into the buffered image
+            Graphics2D g2d = bufferedImage.createGraphics();
 
-        // Create a graphics which can be used to draw into the buffered image
-        Graphics2D g2d = bufferedImage.createGraphics();
+            g2d.fillRect(0, 0, (int) width, (int) height);
 
-        // fill all the image with white
-        g2d.setColor(Color.white);
-        g2d.fillRect(0, 0, width, height);
 
-        // create a circle with black
-        g2d.setColor(Color.black);
-        g2d.fillOval(0, 0, width, height);
+            g2d.setColor(Color.lightGray);
+            g2d.drawString(drawString, (int) width / 2 - 100, (int) height / 2 - 50);
 
-        // create a string with yellow
-        g2d.setColor(Color.yellow);
-        g2d.drawString(drawString, 50, 120);
+            // Disposes of this graphics context and releases any system resources that it is using.
+            g2d.dispose();
+            ImageIO.write(bufferedImage, formatName, file);
+            return bufferedImage;
 
-        // Disposes of this graphics context and releases any system resources that it is using.
-        g2d.dispose();
-        File file = new File(fileName + "." + formatName);
-        ImageIO.write(bufferedImage, formatName, file);
-        return bufferedImage;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @FXML
+    public void showFileChooser() {
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Text Files", "*.txt")
+                , new FileChooser.ExtensionFilter("Word Files", "*.docx")
+                , new FileChooser.ExtensionFilter("Pdf Files", "*.pdf")
+                , new FileChooser.ExtensionFilter("Image files", "*.png", "*.jpeg", "*.jpg", "*.jfif")
+        );
+        fileChooser.setTitle("Select file");
+        Stage stage = (Stage) mainAnchorPane.getScene().getWindow();
+        List<File> files = fileChooser.showOpenMultipleDialog(stage);
+        if (files != null) {
+            VBox previewVBox = loadFilesToPreview(files, rightMenuSubVbox);
+            rightScrollPane.setContent(previewVBox);
+        }
     }
 }
