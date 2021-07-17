@@ -4,6 +4,8 @@ import com.raisedsoftware.animation.Animation;
 import com.raisedsoftware.model.ImageViewModel;
 import com.raisedsoftware.model.Shadow;
 import com.raisedsoftware.util.KeyCreater;
+import fr.opensagres.poi.xwpf.converter.pdf.PdfConverter;
+import fr.opensagres.poi.xwpf.converter.pdf.PdfOptions;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
@@ -20,12 +22,10 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
 
-import javax.crypto.KeyGenerator;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -107,20 +107,19 @@ public class Controller {
         vBox.setSpacing(10);
         for (File file : files) {
             try {
-                switch (getFileExtension(file)) {
+                String type = getFileExtension(file);
+                switch (type) {
                     case "jpeg":
                     case "jpg":
                     case "png":
                         vBox.getChildren().add(createHboxFromImage(vBox, file));
                         break;
                     case "pdf":
-                        PDDocument pdDocument = PDDocument.load(file);
-                        PDFRenderer pdfRenderer = new PDFRenderer(pdDocument);
-                        for (int i = 0; i < pdDocument.getNumberOfPages(); i++) {
-                            var bufferedImage = pdfRenderer.renderImage(i);
-                            vBox.getChildren().add(createHboxFromImage(vBox, convertToFxImage(bufferedImage)));
-                        }
-                        pdDocument.close();
+                        convertPdftoImage(file, vBox);
+                        break;
+                    case "docx":
+                        File pdfFile = convertDocxtoPdf(file);
+                        convertPdftoImage(pdfFile, vBox);
                         break;
                 }
             } catch (Exception e) {
@@ -171,9 +170,10 @@ public class Controller {
             }
         });
         close.setOnMouseClicked(event -> {
-            if (imgView.getId() == model.getId()) {
+            if (imgView.getId().equals(model.getId())) {
                 sourceImageView.setImage(null);
                 model.setImage(null);
+                model.setId(null);
             }
             vBox.getChildren().remove(hBox);
             vBox.requestLayout();
@@ -193,19 +193,50 @@ public class Controller {
         return hBox;
     }
 
+    public void convertPdftoImage(File file, VBox vBox) throws IOException {
+        PDDocument pdDocument = PDDocument.load(file);
+        PDFRenderer pdfRenderer = new PDFRenderer(pdDocument);
+        for (int i = 0; i < pdDocument.getNumberOfPages(); i++) {
+            var bufferedImage = pdfRenderer.renderImage(i);
+            vBox.getChildren().add(createHboxFromImage(vBox, convertToFxImage(bufferedImage)));
+        }
+        pdDocument.close();
+    }
+
+    public File convertDocxtoPdf(File file) throws IOException {
+        XWPFDocument document = new XWPFDocument(new FileInputStream(file.getAbsolutePath()));
+        PdfOptions pdfOptions = PdfOptions.create();
+        File pdfFile = new File(file.getName().substring(0, file.getName().lastIndexOf(".")) + ".pdf");
+        OutputStream outputStream = new FileOutputStream(pdfFile);
+        PdfConverter converter = (PdfConverter) PdfConverter.getInstance();
+        converter.convert(document, outputStream, pdfOptions);
+        document.close();
+        outputStream.close();
+        return pdfFile;
+    }
+
     public HBox createHboxFromImage(VBox vBox, Image image) {
         HBox hBox = new HBox();
         hBox.setPrefSize(240, 200);
         ImageView imgView = new ImageView();
         ImageView close = new ImageView();
+        imgView.setId(KeyCreater.randomNumber());
+
         close.setPickOnBounds(true);
         close.setFitWidth(20);
         close.setFitHeight(20);
         imgView.setOnMouseClicked(mouseEvent -> {
             setFilePreview(sourceImageView, image);
             model.setImage(image);
+            model.setId(imgView.getId());
+
         });
         close.setOnMouseClicked(event -> {
+            if (imgView.getId().equals(model.getId())) {
+                sourceImageView.setImage(null);
+                model.setImage(null);
+                model.setId(null);
+            }
             vBox.getChildren().remove(hBox);
             vBox.requestLayout();
 
